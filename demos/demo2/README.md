@@ -1,0 +1,1 @@
+# Demo 2 - Connecting MultiClustering applications using Red Hat Interconnect
