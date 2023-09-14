@@ -130,7 +130,7 @@ az network vnet subnet create \
 
 * Disable network policies on the control plane subnet
 
-```bash
+```sh
 az network vnet subnet update \
   --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
   --resource-group $AZR_RESOURCE_GROUP \
@@ -172,7 +172,7 @@ oc login --username kubeadmin --password $ARO_KUBEPASS --server=$ARO_URL
 
 * Install the Skupper command-line tool
 
-```bash
+```sh
 curl https://skupper.io/install.sh | sh
 ```
 
@@ -183,7 +183,7 @@ namespace where it operates.
 
 * Configure Kubeconfig for MultiClustering
 
-```bash
+```sh
 rm -rf /var/tmp/interconnect-lab-kubeconfig
 touch /var/tmp/interconnect-lab-kubeconfig
 export KUBECONFIG=/var/tmp/interconnect-lab-kubeconfig
@@ -204,7 +204,7 @@ _**ROSA Cluster**_
 Set context to ROSA cluster and create demo namespace:
 
 ```sh
-kubectl config use $ROSA_ROSA_CLUSTER_NAME
+kubectl config use $ROSA_CLUSTER_NAME
 kubectl create namespace rosa
 kubectl config set-context --current --namespace=rosa
 ```
@@ -240,11 +240,17 @@ oc get csv $SUB -n openshift-operators -o template --template '{{.status.phase}}
 Configure the skupper-site instance:
 
 ```sh
-cat << EOF | kubectl apply -n aro -f -
+cat << EOF | kubectl apply -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: skupper-site
+data:
+  router-mode: interior
+  console-user: "admin"
+  console-password: "admin"
+  console: "true"
+  flow-collector: "true"
 EOF
 ```
 
@@ -262,7 +268,7 @@ Set context to ARO cluster and create demo namespace:
 ```sh
 kubectl config use $AZR_CLUSTER
 kubectl create namespace aro
-kubectl config set-context --namespace=aro
+kubectl config set-context $AZR_CLUSTER --namespace=aro
 ```
 
 Install operator:
@@ -296,7 +302,7 @@ oc get csv $SUB -n openshift-operators -o template --template '{{.status.phase}}
 Configure the skupper-site instance:
 
 ```sh
-cat << EOF | kubectl apply -n aro -f -
+cat << EOF | kubectl apply -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -332,21 +338,21 @@ link.
 
 _**ROSA Cluster**_
 
-```bash
+```sh
 kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
 skupper token create /tmp/secret.token 
 ```
 
 _**ARO Cluster**_
 
-```bash
+```sh
 kubectl config use $AZR_CLUSTER --namespace=aro
 skupper link create /tmp/secret.token
 ```
 
 * In the same ARO cluster, check the skupper link status and see if the Link is with the connected status:
 
-```bash
+```sh
 skupper link status
 ```
 
@@ -358,20 +364,24 @@ _**ROSA Cluster**_
 
 * Deploy the frontend in the ROSA cluster:
 
-```
-kubectl config use $ROSA_CLUSTER_NAME
-echo "I am in $ROSA_CLUSTER_NAME!"
+```sh
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
 kubectl create --namespace rosa deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
+
+# Wait until deployment is READY
+kubectl get deploy frontend
 ```
 
 _**ARO Cluster**_
 
-* Deploy the backend in the ROSA cluster:
+* Deploy the backend in the ARO cluster:
 
-```
-kubectl config use $AZR_CLUSTER
-echo "I am in $AZR_CLUSTER!"
+```sh
+kubectl config use $AZR_CLUSTER --namespace=aro
 kubectl create --namespace aro deployment backend --image quay.io/rcarrata/skupper-summit-backend:v4 --replicas 3
+
+# Wait until deployment is READY
+kubectl get deploy backend
 ```
 
 ## Expose the backend service
@@ -380,18 +390,16 @@ We have established connectivity between the two namespaces and made the backend
 
 Before we can test the application, we need external access to the frontend.
 
-_**ROSA Cluster**_
+_**ARO Cluster**_
 
-```
-echo "I am in $AZR_CLUSTER!"
+```sh
 skupper expose deployment/backend --port 8080
 ```
 
-_**ARO Cluster**_
+_**ROSA Cluster**_
 
-```
-kubectl config use $ROSA_CLUSTER_NAME
-echo "I am in $ROSA_CLUSTER_NAME!"
+```sh
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
 kubectl expose deployment/frontend --port 8080
 oc expose svc/frontend
 ```
@@ -405,10 +413,9 @@ that address.
 
 _**ROSA Cluster**_
 
-```bash
-kubectl config use $ROSA_CLUSTER_NAME
-echo "I am in $ROSA_CLUSTER_NAME!"
-FRONTEND_URL=$(kubectl get route -n west frontend -o jsonpath='{.spec.host}')
+```sh
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
+FRONTEND_URL=$(kubectl get route frontend -o jsonpath='{.spec.host}')
 curl http://$FRONTEND_URL/api/health
 ```
 
@@ -420,10 +427,14 @@ Skupper includes a web console you can use to view the application network.  To 
 
 _**ROSA Cluster**_
 
-```bash
+```sh
 skupper status
-kubectl get route -n west skupper -o jsonpath='{.spec.host}'
+kubectl get route skupper -o jsonpath='{.spec.host}'
 kubectl get secret/skupper-console-users -o jsonpath={.data.admin} | base64 -d
 ```
 
 Navigate to the Skupper Console in your browser.  When prompted, log in as user `admin` and enter the password.
+
+Inside 'Processes' tab you should see something like this:
+
+![Skupper Processes](../../assets/pics/skupper-site.png)
