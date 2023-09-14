@@ -44,18 +44,25 @@ With Skupper, you can place the backend in one cluster and the
 frontend in another and maintain connectivity between the two
 services without exposing the backend to the public internet.
 
+## Prerequisites
+
 ### Deploy ROSA Cluster
 
-* ROSA 1
+* Define the prerequisites for install the ROSA cluster
 
-```md
-export AWS_PROFILE=openenv
-export CLUSTER_NAME="poc-inter-1" 
-export AWS_REGION="us-east-2"
-export VERSION="4.13.3"
+```sh
+export VERSION=4.11.36 \
+      ROSA_CLUSTER_NAME=poc-inter-1 \
+      AWS_ACCOUNT_ID=`aws sts get-caller-identity --query Account --output text` \
+      REGION=eu-west-1 \
+      AWS_PAGER="" \
+      CIDR="10.10.0.0/16"
+
 ```
 
-```md
+* Create roles and cluster admin
+
+```sh
 rosa create account-roles --mode auto
 rosa create cluster --cluster-name $CLUSTER_NAME --sts --mode auto --yes
 ```
@@ -71,23 +78,95 @@ rosa create admin -c $CLUSTER_NAME
 oc login https://api.poc-inter-1.xxx.com:6443 --username cluster-admin --password xxx
 ```
 
-* ROSA 2
+### Deploy ARO cluster
 
-```md
-export CLUSTER_NAME_2="poc-inter-2" 
-export AWS_REGION="eu-west-1"
-export VERSION="4.13.3"
-rosa create account-roles --mode auto
-rosa create cluster --cluster-name $CLUSTER_NAME_2 --sts --mode auto --yes
+* Define the prerequisites for install the ARO cluster
+
+```sh
+AZR_RESOURCE_LOCATION=eastus
+AZR_RESOURCE_GROUP=poc-inter-2-rg
+AZR_CLUSTER=poc-inter-2
+AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```
 
-```
-oc login https://api.poc-inter-2.xxx.xxx.xxx.com:6443 --username cluster-admin --password xxx
+* Create an Azure resource group
+
+```sh
+ az group create \
+   --name $AZR_RESOURCE_GROUP \
+   --location $AZR_RESOURCE_LOCATION
 ```
 
-## Deploy ARO cluster
+* Create virtual network
 
-TBD
+```sh
+ az network vnet create \
+   --address-prefixes 10.0.0.0/22 \
+   --name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --resource-group $AZR_RESOURCE_GROUP
+```
+
+* Create control plane subnet
+
+```sh
+ az network vnet subnet create \
+   --resource-group $AZR_RESOURCE_GROUP \
+   --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+   --address-prefixes 10.0.0.0/23 \
+   --service-endpoints Microsoft.ContainerRegistry
+```
+
+* Create machine subnet
+
+```sh
+az network vnet subnet create \
+  --resource-group $AZR_RESOURCE_GROUP \
+  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+  --name "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+  --address-prefixes 10.0.2.0/23 \
+  --service-endpoints Microsoft.ContainerRegistry
+```
+
+* Disable network policies on the control plane subnet
+
+```bash
+az network vnet subnet update \
+  --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+  --resource-group $AZR_RESOURCE_GROUP \
+  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+  --disable-private-link-service-network-policies true
+```
+
+* Create the ARO cluster
+
+```sh
+ az aro create \
+   --resource-group $AZR_RESOURCE_GROUP \
+   --name $AZR_CLUSTER \
+   --vnet "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --master-subnet "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+   --worker-subnet "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+   --pull-secret @$AZR_PULL_SECRET
+```
+
+* Get ARO OpenShift API Url
+
+```sh
+ARO_URL=$(az aro show -g $AZR_RESOURCE_GROUP -n $AZR_CLUSTER --query apiserverProfile.url -o tsv)
+```
+
+* Login into the ARO cluster and set context
+
+```sh
+ARO_KUBEPASS=$(az aro list-credentials --name $AZR_CLUSTER --resource-group $AZR_RESOURCE_GROUP -o tsv --query kubeadminPassword)
+```
+
+* Login into the ARO cluster and set context
+
+```sh
+oc login --username kubeadmin --password $ARO_KUBEPASS --server=$ARO_URL
+```
 
 ## Installing and Configuring Skupper CLI & Kubeconfigs
 
@@ -110,12 +189,12 @@ touch /var/tmp/interconnect-lab-kubeconfig
 export KUBECONFIG=/var/tmp/interconnect-lab-kubeconfig
 
 oc login https://api.poc-inter-1.xx.xxx.xxx.com:6443 --username cluster-admin --password xxx
-kubectl config rename-context $(oc config current-context) $CLUSTER_NAME
-kubectl config use $CLUSTER_NAME
+kubectl config rename-context $(oc config current-context) $ROSA_CLUSTER_NAME
+kubectl config use $ROSA_CLUSTER_NAME
 
-oc login https://api.poc-inter-2.xxx.p1.xxx.com:6443 --username cluster-admin --password xxx
-kubectl config rename-context $(oc config current-context) $CLUSTER_NAME_2
-kubectl config use $CLUSTER_NAME_2
+oc login --username kubeadmin --password $ARO_KUBEPASS --server=$ARO_URL
+kubectl config rename-context $(oc config current-context) $AZR_CLUSTER
+kubectl config use $AZR_CLUSTER
 ```
 
 ## Install Skupper in your namespaces
