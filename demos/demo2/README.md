@@ -8,6 +8,8 @@ The backend service is located in `ARO` cluster, but the frontend service in `RO
 
 #### Contents
 
+TODO: fix table of contents
+
 * [Overview](#overview)
 * [Prerequisites](#prerequisites)
 * [Step 1: Install the Skupper command-line tool](#step-1-install-the-skupper-command-line-tool)
@@ -15,12 +17,11 @@ The backend service is located in `ARO` cluster, but the frontend service in `RO
 * [Step 3: Access your clusters](#step-3-access-your-clusters)
 * [Step 4: Set up your namespaces](#step-4-set-up-your-namespaces)
 * [Step 5: Install Skupper in your namespaces](#step-5-install-skupper-in-your-namespaces)
-* [Step 6: Check the status of your namespaces](#step-6-check-the-status-of-your-namespaces)
-* [Step 7: Link your namespaces](#step-7-link-your-namespaces)
-* [Step 8: Deploy the frontend and backend services](#step-8-deploy-the-frontend-and-backend-services)
-* [Step 9: Expose the backend service](#step-9-expose-the-backend-service)
-* [Step 10: Expose the frontend service](#step-10-expose-the-frontend-service)
-* [Step 11: Test the application](#step-11-test-the-application)
+* [Step 6: Link your namespaces](#step-6-link-your-namespaces)
+* [Step 7: Deploy the frontend and backend services](#step-7-deploy-the-frontend-and-backend-services)
+* [Step 8: Expose the backend service](#step-8-expose-the-backend-service)
+* [Step 9: Expose the frontend service](#step-9-expose-the-frontend-service)
+* [Step 10: Test the application](#step-10-test-the-application)
 * [Accessing the web console](#accessing-the-web-console)
 * [Cleaning up](#cleaning-up)
 * [Summary](#summary)
@@ -52,26 +53,25 @@ services without exposing the backend to the public internet.
 
 ```sh
 export VERSION=4.11.36 \
-      ROSA_CLUSTER_NAME=poc-inter-1 \
+      ROSA_ROSA_CLUSTER_NAME=poc-inter-1 \
       AWS_ACCOUNT_ID=`aws sts get-caller-identity --query Account --output text` \
       REGION=eu-west-1 \
       AWS_PAGER="" \
       CIDR="10.10.0.0/16"
-
 ```
 
 * Create roles and cluster admin
 
 ```sh
 rosa create account-roles --mode auto
-rosa create cluster --cluster-name $CLUSTER_NAME --sts --mode auto --yes
+rosa create cluster --cluster-name $ROSA_CLUSTER_NAME --sts --mode auto --yes
 ```
 
-I: To determine when your cluster is Ready, run 'rosa describe cluster -c $CLUSTER_NAME'.
-I: To watch your cluster installation logs, run 'rosa logs install -c $CLUSTER_NAME --watch'.
+I: To determine when your cluster is Ready, run 'rosa describe cluster -c $ROSA_CLUSTER_NAME'.
+I: To watch your cluster installation logs, run 'rosa logs install -c $ROSA_CLUSTER_NAME --watch'.
 
 ```md
-rosa create admin -c $CLUSTER_NAME
+rosa create admin -c $ROSA_CLUSTER_NAME
 ```
 
 ```
@@ -189,56 +189,126 @@ touch /var/tmp/interconnect-lab-kubeconfig
 export KUBECONFIG=/var/tmp/interconnect-lab-kubeconfig
 
 oc login https://api.poc-inter-1.xx.xxx.xxx.com:6443 --username cluster-admin --password xxx
-kubectl config rename-context $(oc config current-context) $ROSA_CLUSTER_NAME
-kubectl config use $ROSA_CLUSTER_NAME
+kubectl config rename-context $(oc config current-context) $ROSA_ROSA_CLUSTER_NAME
+kubectl config use $ROSA_ROSA_CLUSTER_NAME
 
 oc login --username kubeadmin --password $ARO_KUBEPASS --server=$ARO_URL
 kubectl config rename-context $(oc config current-context) $AZR_CLUSTER
 kubectl config use $AZR_CLUSTER
 ```
 
-## Install Skupper in your namespaces
-
-The `skupper init` command installs the Skupper router and service
-controller in the current namespace.  
-
-Run the `skupper init` command in each cluster:
+## Install and configure Red Hat Service Interconnect
 
 _**ROSA Cluster**_
 
-```bash
-kubectl config use $CLUSTER_NAME
-echo "I am in $CLUSTER_NAME!"
+Set context to ROSA cluster and create demo namespace:
+
+```sh
+kubectl config use $ROSA_ROSA_CLUSTER_NAME
 kubectl create namespace rosa
-kubectl config set-context --current --namespace rosa
+kubectl config set-context --current --namespace=rosa
+```
 
-skupper init --enable-console --enable-flow-collector
+Install operator:
+
+```sh
+cat << EOF | kubectl apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: skupper-operator
+  namespace: openshift-operators
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: skupper-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
+```
+
+Check installation
+
+```sh
+# Get Subscription
+SUB=$(oc get subscription skupper-operator -n openshift-operators -o template --template '{{.status.currentCSV}}')
+
+# Check status (wait until status is succeeded)
+oc get csv $SUB -n openshift-operators -o template --template '{{.status.phase}}'
+```
+
+Configure the skupper-site instance:
+
+```sh
+cat << EOF | kubectl apply -n aro -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skupper-site
+EOF
+```
+
+Check skupper is configured:
+
+```sh
+skupper status
+# Skupper is enabled for namespace "rosa" in interior mode. It is not connected to any other sites. It has no exposed services.
 ```
 
 _**ARO Cluster**_
 
-```bash
-skupper init
+Set context to ARO cluster and create demo namespace:
+
+```sh
+kubectl config use $AZR_CLUSTER
+kubectl create namespace aro
+kubectl config set-context --namespace=aro
 ```
 
-## Check the status of your namespaces
+Install operator:
 
-* Use `skupper status` in each console to check that Skupper is installed.
-
-_**ROSA Cluster**_
-
-```bash
-kubectl config use $CLUSTER_NAME
-echo "I am in $CLUSTER_NAME!"
-skupper status
+```sh
+cat << EOF | kubectl apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: skupper-operator
+  namespace: openshift-operators
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: skupper-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
 ```
 
-_**ARO Cluster**_
+Check installation
 
-```bash
-kubectl config use $CLUSTER_NAME_2
-echo "I am in $CLUSTER_NAME_2!"
+```sh
+# Get Subscription
+SUB=$(oc get subscription skupper-operator -n openshift-operators -o template --template '{{.status.currentCSV}}')
+
+# Check status (wait until status is succeeded)
+oc get csv $SUB -n openshift-operators -o template --template '{{.status.phase}}'
+```
+
+Configure the skupper-site instance:
+
+```sh
+cat << EOF | kubectl apply -n aro -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skupper-site
+EOF
+```
+
+Check skupper is configured:
+
+```sh
 skupper status
+# Skupper is enabled for namespace "rosa" in interior mode. It is not connected to any other sites. It has no exposed services.
 ```
 
 ## Link your namespaces
@@ -263,16 +333,14 @@ link.
 _**ROSA Cluster**_
 
 ```bash
-kubectl config use $CLUSTER_NAME
-echo "I am in $CLUSTER_NAME!"
-skupper token create /tmp/secret.token
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
+skupper token create /tmp/secret.token 
 ```
 
 _**ARO Cluster**_
 
 ```bash
-kubectl config use $CLUSTER_NAME_2
-echo "I am in $CLUSTER_NAME_2!"
+kubectl config use $AZR_CLUSTER --namespace=aro
 skupper link create /tmp/secret.token
 ```
 
@@ -291,8 +359,8 @@ _**ROSA Cluster**_
 * Deploy the frontend in the ROSA cluster:
 
 ```
-kubectl config use $CLUSTER_NAME
-echo "I am in $CLUSTER_NAME!"
+kubectl config use $ROSA_CLUSTER_NAME
+echo "I am in $ROSA_CLUSTER_NAME!"
 kubectl create --namespace rosa deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
 ```
 
@@ -301,8 +369,8 @@ _**ARO Cluster**_
 * Deploy the backend in the ROSA cluster:
 
 ```
-kubectl config use $CLUSTER_NAME_2
-echo "I am in $CLUSTER_NAME_2!"
+kubectl config use $AZR_CLUSTER
+echo "I am in $AZR_CLUSTER!"
 kubectl create --namespace aro deployment backend --image quay.io/rcarrata/skupper-summit-backend:v4 --replicas 3
 ```
 
@@ -315,15 +383,15 @@ Before we can test the application, we need external access to the frontend.
 _**ROSA Cluster**_
 
 ```
-echo "I am in $CLUSTER_NAME_2!"
+echo "I am in $AZR_CLUSTER!"
 skupper expose deployment/backend --port 8080
 ```
 
 _**ARO Cluster**_
 
 ```
-kubectl config use $CLUSTER_NAME
-echo "I am in $CLUSTER_NAME!"
+kubectl config use $ROSA_CLUSTER_NAME
+echo "I am in $ROSA_CLUSTER_NAME!"
 kubectl expose deployment/frontend --port 8080
 oc expose svc/frontend
 ```
@@ -338,8 +406,8 @@ that address.
 _**ROSA Cluster**_
 
 ```bash
-kubectl config use $CLUSTER_NAME
-echo "I am in $CLUSTER_NAME!"
+kubectl config use $ROSA_CLUSTER_NAME
+echo "I am in $ROSA_CLUSTER_NAME!"
 FRONTEND_URL=$(kubectl get route -n west frontend -o jsonpath='{.spec.host}')
 curl http://$FRONTEND_URL/api/health
 ```
