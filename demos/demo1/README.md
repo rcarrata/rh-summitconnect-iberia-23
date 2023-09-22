@@ -208,7 +208,7 @@ kubectl get nodes --show-labels | grep submariner
 ```sh
 AZR_RESOURCE_LOCATION=eastus
 AZR_RESOURCE_GROUP=aro-sbmr2-rg
-AZR_CLUSTER=aro-sbmr2
+AZR_CLUSTER=aro-summit
 AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```
 
