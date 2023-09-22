@@ -122,7 +122,7 @@ NOTE: if it's not in Running state, wait a couple of minutes and check again.
 * Define the prerequisites for install the ROSA cluster
 
 ```sh
-export ROSA_CLUSTER_NAME_2=rosa-summit \
+export ROSA_CLUSTER_NAME=rosa-summit \
        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) \
        REGION=eu-west-1 \
        AWS_PAGER="" \
