@@ -103,7 +103,8 @@ kind: MultiClusterHub
 metadata:
   namespace: open-cluster-management
   name: multiclusterhub
-spec: {}
+spec:
+  availabilityConfig: Basic
 EOF
 ```
 
@@ -116,18 +117,18 @@ kubectl get multiclusterhub -n open-cluster-management -o json | jq '.items[0].s
 
 NOTE: if it's not in Running state, wait a couple of minutes and check again.
 
-
 ## 4. Deploy ROSA Cluster
 
 * Define the prerequisites for install the ROSA cluster
 
 ```sh
- export VERSION=4.11.36 \
-        ROSA_CLUSTER_NAME=rosa-sbmr1 \
-        AWS_ACCOUNT_ID=`aws sts get-caller-identity --query Account --output text` \
-        REGION=eu-west-1 \
-        AWS_PAGER="" \
-        CIDR="10.10.0.0/16"
+export ROSA_CLUSTER_NAME=rosa-summit \
+       AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) \
+       REGION=eu-west-1 \
+       AWS_PAGER="" \
+       CIDR="10.20.0.0/16" \
+       POD_CIDR="10.132.0.0/14" \
+       SERVICE_CIDR="172.31.0.0/16"
 ```
 
 NOTE: it's critical that the Machine CIDR of the ROSA and ARO clusters not overlap, for that reason we're setting different CIDRs than the out of the box ROSA / ARO cluster install.  
@@ -141,17 +142,12 @@ rosa create account-roles --mode auto --yes
 * Generate a STS ROSA cluster
 
 ```sh
-rosa create cluster -y --cluster-name ${ROSA_CLUSTER_NAME} \
---region ${REGION} --version ${VERSION} \
---machine-cidr $CIDR \
---sts
-```
-
-* Create the Operator and OIDC Roles
-
-```sh
-rosa create operator-roles --cluster ${ROSA_CLUSTER_NAME} --mode auto --yes
-rosa create oidc-provider --cluster ${ROSA_CLUSTER_NAME} --mode auto --yes
+rosa create cluster -y --cluster-name ${ROSA_CLUSTER_NAME_2} \
+ --region ${REGION} --version ${VERSION} \
+ --machine-cidr $CIDR \
+ --pod-cidr $POD_CIDR \
+ --service-cidr $SERVICE_CIDR \
+ --sts --mode auto
 ```
 
 * Check the status of the Rosa cluster (40 mins wait until is in ready status)
@@ -212,10 +208,8 @@ kubectl get nodes --show-labels | grep submariner
 ```sh
 AZR_RESOURCE_LOCATION=eastus
 AZR_RESOURCE_GROUP=aro-sbmr2-rg
-AZR_CLUSTER=aro-sbmr2
+AZR_CLUSTER=aro-summit
 AZR_PULL_SECRET=~/Downloads/pull-secret.txt
-POD_CIDR="10.132.0.0/14"
-SERVICE_CIDR="172.31.0.0/16"
 ```
 
 * Create an Azure resource group
@@ -276,8 +270,6 @@ az network vnet subnet update \
    --vnet "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
    --master-subnet "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
    --worker-subnet "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
-   --pod-cidr "$POD_CIDR" \
-   --service-cidr "$SERVICE_CIDR" \
    --pull-secret @$AZR_PULL_SECRET
 ```
 
