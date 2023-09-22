@@ -210,8 +210,6 @@ AZR_RESOURCE_LOCATION=eastus
 AZR_RESOURCE_GROUP=aro-sbmr2-rg
 AZR_CLUSTER=aro-sbmr2
 AZR_PULL_SECRET=~/Downloads/pull-secret.txt
-POD_CIDR="10.132.0.0/14"
-SERVICE_CIDR="172.31.0.0/16"
 ```
 
 * Create an Azure resource group
@@ -272,8 +270,6 @@ az network vnet subnet update \
    --vnet "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
    --master-subnet "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
    --worker-subnet "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
-   --pod-cidr "$POD_CIDR" \
-   --service-cidr "$SERVICE_CIDR" \
    --pull-secret @$AZR_PULL_SECRET
 ```
 
