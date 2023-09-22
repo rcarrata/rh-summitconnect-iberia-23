@@ -10,7 +10,7 @@ metadata:
   labels:
     app: redis-master-app
 spec:
-  channel: guestbook/redis-slave-app-latest
+  channel: guestbook/redis-master-app-latest
   placement:
     placementRef:
       name: redis-master-app-placement-1

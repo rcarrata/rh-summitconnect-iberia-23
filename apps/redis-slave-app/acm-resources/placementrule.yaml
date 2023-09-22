@@ -9,5 +9,4 @@ metadata:
 spec:
   clusterSelector:
     matchLabels:
-      name: rosa-sbmr2
-
+      name: aro-summit
