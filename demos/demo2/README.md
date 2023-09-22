@@ -63,8 +63,8 @@ oc login https://api.poc-inter-1.xxx.com:6443 --username cluster-admin --passwor
 
 ```sh
 AZR_RESOURCE_LOCATION=eastus
-AZR_RESOURCE_GROUP=poc-inter-2-rg
-AZR_CLUSTER=poc-inter-2
+AZR_RESOURCE_GROUP=aro-summit-rg
+AZR_CLUSTER=aro-summit
 AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```
 
@@ -184,8 +184,8 @@ _**ROSA Cluster**_
 
 ```sh
 kubectl config use $ROSA_CLUSTER_NAME
-kubectl create namespace rosa
-kubectl config set-context --current --namespace=rosa
+kubectl create namespace rosa-interconnect
+kubectl config set-context --current --namespace=rosa-interconnect
 ```
 
 * Install operator:
@@ -246,8 +246,8 @@ _**ARO Cluster**_
 
 ```sh
 kubectl config use $AZR_CLUSTER
-kubectl create namespace aro
-kubectl config set-context $AZR_CLUSTER --namespace=aro
+kubectl create namespace aro-interconnect
+kubectl config set-context $AZR_CLUSTER --namespace=aro-interconnect
 ```
 
 * Install operator:
@@ -318,14 +318,14 @@ link.
 _**ROSA Cluster**_
 
 ```sh
-kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa-interconnect
 skupper token create /tmp/secret.token 
 ```
 
 _**ARO Cluster**_
 
 ```sh
-kubectl config use $AZR_CLUSTER --namespace=aro
+kubectl config use $AZR_CLUSTER --namespace=aro-interconnect
 skupper link create /tmp/secret.token
 ```
 
@@ -344,7 +344,7 @@ _**ROSA Cluster**_
 * Deploy the frontend in the ROSA cluster:
 
 ```sh
-kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa-interconnect
 kubectl create --namespace rosa deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
 
 # Wait until deployment is READY
@@ -356,8 +356,8 @@ _**ARO Cluster**_
 * Deploy the backend in the ARO cluster:
 
 ```sh
-kubectl config use $AZR_CLUSTER --namespace=aro
-kubectl create --namespace aro deployment backend --image quay.io/rcarrata/skupper-summit-backend:v4 --replicas 3
+kubectl config use $AZR_CLUSTER --namespace=aro-interconnect
+kubectl create --namespace aro-interconnect deployment backend --image quay.io/rcarrata/skupper-summit-backend:v4 --replicas 3
 
 # Wait until deployment is READY
 kubectl get deploy backend
@@ -378,7 +378,7 @@ skupper expose deployment/backend --port 8080
 _**ROSA Cluster**_
 
 ```sh
-kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa-interconnect
 kubectl expose deployment/frontend --port 8080
 oc expose svc/frontend
 ```
@@ -393,7 +393,7 @@ that address.
 _**ROSA Cluster**_
 
 ```sh
-kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa
+kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa-interconnect
 FRONTEND_URL=$(kubectl get route frontend -o jsonpath='{.spec.host}')
 curl http://$FRONTEND_URL/api/health
 ```
