@@ -103,7 +103,8 @@ kind: MultiClusterHub
 metadata:
   namespace: open-cluster-management
   name: multiclusterhub
-spec: {}
+spec:
+  availabilityConfig: Basic
 EOF
 ```
 
