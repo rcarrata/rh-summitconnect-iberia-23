@@ -210,7 +210,7 @@ EOF
 
 ```sh
 # Get Subscription
-SUB=$(oc get subscription skupper-operator -n openshift-operators -o template --template '{{.status.currentCSV}}')
+SUB=$(oc get subs -n openshift-operators skupper-operator -o yaml -o template --template '{{.status.currentCSV}}')
 
 # Check status (wait until status is succeeded)
 oc get csv $SUB -n openshift-operators -o template --template '{{.status.phase}}'
