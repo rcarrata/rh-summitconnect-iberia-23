@@ -237,7 +237,7 @@ EOF
 
 ```sh
 skupper status
-# Skupper is enabled for namespace "rosa" in interior mode. It is not connected to any other sites. It has no exposed services.
+# Skupper is enabled for namespace "rosa-interconnect" in interior mode. It is not connected to any other sites. It has no exposed services.
 ```
 
 _**ARO Cluster**_
@@ -345,7 +345,7 @@ _**ROSA Cluster**_
 
 ```sh
 kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa-interconnect
-kubectl create --namespace rosa deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
+kubectl create --namespace rosa-interconnect deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
 
 # Wait until deployment is READY
 kubectl get deploy frontend
