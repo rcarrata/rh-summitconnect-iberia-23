@@ -293,7 +293,7 @@ EOF
 
 ```sh
 skupper status
-# Skupper is enabled for namespace "aro" in interior mode. It is not connected to any other sites. It has no exposed services.
+# Skupper is enabled for namespace "aro-interconnect" in interior mode. It is not connected to any other sites. It has no exposed services.
 ```
 
 ## 5. Link your namespaces
