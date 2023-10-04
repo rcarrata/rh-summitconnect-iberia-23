@@ -210,7 +210,7 @@ EOF
 
 ```sh
 # Get Subscription
-SUB=$(oc get subscription skupper-operator -n openshift-operators -o template --template '{{.status.currentCSV}}')
+SUB=$(oc get subs -n openshift-operators skupper-operator -o yaml -o template --template '{{.status.currentCSV}}')
 
 # Check status (wait until status is succeeded)
 oc get csv $SUB -n openshift-operators -o template --template '{{.status.phase}}'
@@ -237,7 +237,7 @@ EOF
 
 ```sh
 skupper status
-# Skupper is enabled for namespace "rosa" in interior mode. It is not connected to any other sites. It has no exposed services.
+# Skupper is enabled for namespace "rosa-interconnect" in interior mode. It is not connected to any other sites. It has no exposed services.
 ```
 
 _**ARO Cluster**_
@@ -293,7 +293,7 @@ EOF
 
 ```sh
 skupper status
-# Skupper is enabled for namespace "aro" in interior mode. It is not connected to any other sites. It has no exposed services.
+# Skupper is enabled for namespace "aro-interconnect" in interior mode. It is not connected to any other sites. It has no exposed services.
 ```
 
 ## 5. Link your namespaces
