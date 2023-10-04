@@ -32,7 +32,7 @@ services without exposing the backend to the public internet.
 
 ```sh
 export VERSION=4.11.36 \
-      ROSA_CLUSTER_NAME=poc-inter-1 \
+      ROSA_CLUSTER_NAME=rosa-summit \
       AWS_ACCOUNT_ID=`aws sts get-caller-identity --query Account --output text` \
       REGION=eu-west-1 \
       AWS_PAGER="" \
@@ -345,7 +345,7 @@ _**ROSA Cluster**_
 
 ```sh
 kubectl config use $ROSA_CLUSTER_NAME --namespace=rosa-interconnect
-kubectl create --namespace rosa deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
+kubectl create --namespace rosa-interconnect deployment frontend --image quay.io/rcarrata/skupper-summit-frontend:v4
 
 # Wait until deployment is READY
 kubectl get deploy frontend
