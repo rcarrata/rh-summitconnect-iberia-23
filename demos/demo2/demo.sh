@@ -1,19 +1,19 @@
 source ../utils/demo-magic.sh
 
 pei "# Demo 2 - Red Hat Interconnect"
-pe "export KUBECONFIG=/var/tmp/interconnect-lab-kubeconfig"
+pe "export KUBECONFIG=/var/tmp/acm-lab-kubeconfig"
 pe "export ROSA_CLUSTER_NAME='rosa-summit'"
 pe "export ARO_CLUSTER='aro-summit'"
 pei ""
 
 pei "# Test the application"
-pe "kubectl config set-context $ROSA_CLUSTER_NAME --namespace=rosa-interconnect"
-pe "FRONTEND_URL=$(kubectl get route frontend -o jsonpath='{.spec.host}')"
+pe "kubectl config use $ROSA_CLUSTER_NAME"
+pe "FRONTEND_URL=$(kubectl get route frontend -o jsonpath='{.spec.host}' -n rosa-interconnect)"
 pe "curl https://$FRONTEND_URL/api/health"
 pei ""
 
 pei "# Creating Skupper Site in ROSA"
-pe "cat << EOF | kubectl apply -f -
+pe "cat << EOF | kubectl apply -n rosa-interconnect -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -30,8 +30,8 @@ wait
 pei ""
 
 pei "# Creating Skupper Site in ARO"
-pe "kubectl config set-context $ARO_CLUSTER --namespace=aro-interconnect"
-pe "cat << EOF | kubectl apply -f -
+pe "kubectl config use $ARO_CLUSTER"
+pe "cat << EOF | kubectl apply -n aro-interconnect -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -42,16 +42,16 @@ wait
 pei ""
 
 pei "# Creating Skupper links in ROSA"
-pe "kubectl config set-context $ROSA_CLUSTER_NAME --namespace=rosa-interconnect"
-pe "skupper token create /tmp/secret.token"
+pe "kubectl config use $ROSA_CLUSTER_NAME"
+pe "skupper token create /tmp/secret.token -n rosa-interconnect"
 
 pei "# Creating Skupper links in ARO"
-pe "kubectl config set-context $ARO_CLUSTER --namespace=aro-interconnect"
-pe "skupper link create /tmp/secret.token"
-pe "skupper link status --wait 60"
+pe "kubectl config use $ARO_CLUSTER"
+pe "skupper link create /tmp/secret.token -n aro-interconnect"
+pe "skupper link status -n aro-interconnect --wait 60"
 
 pei "# Expose the backend service in ARO"
-pe "skupper expose deployment/backend --port 8080"
+pe "skupper expose deployment/backend -n aro-interconnect --port 8080"
 pei ""
 
 PROMPT_TIMEOUT=10
@@ -59,7 +59,5 @@ wait
 pei ""
 
 pei "# Test the application"
-pe "kubectl config set-context $ROSA_CLUSTER_NAME --namespace=rosa-interconnect"
-pe "FRONTEND_URL=$(kubectl get route frontend -o jsonpath='{.spec.host}')"
 pe "curl https://$FRONTEND_URL/api/health"
 pei ""
