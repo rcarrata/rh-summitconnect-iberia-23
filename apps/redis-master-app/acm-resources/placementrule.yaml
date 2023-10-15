@@ -9,4 +9,4 @@ metadata:
 spec:
   clusterSelector:
     matchLabels:
-      name: rosa-summit
+      name: rosa-summit-1

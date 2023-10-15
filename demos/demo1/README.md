@@ -122,12 +122,13 @@ NOTE: if it's not in Running state, wait a couple of minutes and check again.
 * Define the prerequisites for install the ROSA cluster
 
 ```sh
-export ROSA_CLUSTER_NAME=rosa-summit \
+export ROSA_CLUSTER_NAME=rosa-summit-1 \
        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text) \
        REGION=eu-west-1 \
        AWS_PAGER="" \
        CIDR="10.20.0.0/16" \
        POD_CIDR="10.132.0.0/14" \
+       VERSION="4.13.13" \
        SERVICE_CIDR="172.31.0.0/16"
 ```
 
@@ -142,7 +143,7 @@ rosa create account-roles --mode auto --yes
 * Generate a STS ROSA cluster
 
 ```sh
-rosa create cluster -y --cluster-name ${ROSA_CLUSTER_NAME_2} \
+rosa create cluster -y --cluster-name ${ROSA_CLUSTER_NAME} \
  --region ${REGION} --version ${VERSION} \
  --machine-cidr $CIDR \
  --pod-cidr $POD_CIDR \
@@ -208,7 +209,7 @@ kubectl get nodes --show-labels | grep submariner
 ```sh
 AZR_RESOURCE_LOCATION=eastus
 AZR_RESOURCE_GROUP=aro-sbmr2-rg
-AZR_CLUSTER=aro-summit
+ARO_CLUSTER=aro-summit-1
 AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```
 
@@ -225,7 +226,7 @@ AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```sh
  az network vnet create \
    --address-prefixes 10.0.0.0/22 \
-   --name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
    --resource-group $AZR_RESOURCE_GROUP
 ```
 
@@ -234,8 +235,8 @@ AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```sh
  az network vnet subnet create \
    --resource-group $AZR_RESOURCE_GROUP \
-   --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
-   --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+   --vnet-name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --name "$ARO_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
    --address-prefixes 10.0.0.0/23 \
    --service-endpoints Microsoft.ContainerRegistry
 ```
@@ -245,8 +246,8 @@ AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```sh
 az network vnet subnet create \
   --resource-group $AZR_RESOURCE_GROUP \
-  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
-  --name "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+  --vnet-name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+  --name "$ARO_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
   --address-prefixes 10.0.2.0/23 \
   --service-endpoints Microsoft.ContainerRegistry
 ```
@@ -255,9 +256,9 @@ az network vnet subnet create \
 
 ```bash
 az network vnet subnet update \
-  --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+  --name "$ARO_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
   --resource-group $AZR_RESOURCE_GROUP \
-  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+  --vnet-name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
   --disable-private-link-service-network-policies true
 ```
 
@@ -266,23 +267,23 @@ az network vnet subnet update \
 ```sh
  az aro create \
    --resource-group $AZR_RESOURCE_GROUP \
-   --name $AZR_CLUSTER \
-   --vnet "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
-   --master-subnet "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
-   --worker-subnet "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+   --name $ARO_CLUSTER \
+   --vnet "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --master-subnet "$ARO_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+   --worker-subnet "$ARO_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
    --pull-secret @$AZR_PULL_SECRET
 ```
 
 * Get ARO OpenShift API Url
 
 ```sh
-ARO_URL=$(az aro show -g $AZR_RESOURCE_GROUP -n $AZR_CLUSTER --query apiserverProfile.url -o tsv)
+ARO_URL=$(az aro show -g $AZR_RESOURCE_GROUP -n $ARO_CLUSTER --query apiserverProfile.url -o tsv)
 ```
 
 * Login into the ARO cluster and set context
 
 ```sh
-ARO_KUBEPASS=$(az aro list-credentials --name $AZR_CLUSTER --resource-group $AZR_RESOURCE_GROUP -o tsv --query kubeadminPassword)
+ARO_KUBEPASS=$(az aro list-credentials --name $ARO_CLUSTER --resource-group $AZR_RESOURCE_GROUP -o tsv --query kubeadminPassword)
 ```
 
 * Login into the ARO cluster and set context
@@ -290,8 +291,8 @@ ARO_KUBEPASS=$(az aro list-credentials --name $AZR_CLUSTER --resource-group $AZR
 ```sh
 oc login --username kubeadmin --password $ARO_KUBEPASS --server=$ARO_URL
 
-kubectl config rename-context $(oc config current-context) $AZR_CLUSTER
-kubectl config use $AZR_CLUSTER
+kubectl config rename-context $(oc config current-context) $ARO_CLUSTER
+kubectl config use $ARO_CLUSTER
 
 kubectl get dns cluster -o jsonpath='{.spec.baseDomain}'
 ```
@@ -422,13 +423,13 @@ rosa-sbmr1      true           https://api.rosa-subm1.xxxx.p1.openshiftapps.com:
 * Retrieve the ARO token and the ARO API url from the ARO cluster
 
 ```sh
-kubectl config use $AZR_CLUSTER
+kubectl config use $ARO_CLUSTER
 
 SUB2_API=$(oc whoami --show-server)
-echo "$AZR_CLUSTER API: $SUB2_API\n"
+echo "$ARO_CLUSTER API: $SUB2_API\n"
 
 SUB2_TOKEN=$(oc whoami -t)
-echo "$AZR_CLUSTER Token: $SUB2_TOKEN\n"
+echo "$ARO_CLUSTER Token: $SUB2_TOKEN\n"
 ```
 
 * Config the Hub as the current context
@@ -445,13 +446,13 @@ cat << EOF | kubectl apply -f -
 apiVersion: cluster.open-cluster-management.io/v1
 kind: ManagedCluster
 metadata:
-  name: $AZR_CLUSTER
+  name: $ARO_CLUSTER
   labels:
-    name: $AZR_CLUSTER
+    name: $ARO_CLUSTER
     cloud: auto-detect
     vendor: auto-detect
     cluster.open-cluster-management.io/clusterset: rosa-aro-clusters
-    env: $AZR_CLUSTER
+    env: $ARO_CLUSTER
   annotations: {}
 spec:
   hubAcceptsClient: true
@@ -466,7 +467,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: auto-import-secret
-  namespace: $AZR_CLUSTER
+  namespace: $ARO_CLUSTER
 stringData:
   autoImportRetry: "2"
   token: "${SUB2_TOKEN}"
@@ -480,17 +481,17 @@ cat << EOF | kubectl apply -f -
 apiVersion: agent.open-cluster-management.io/v1
 kind: KlusterletAddonConfig
 metadata:
-  name: $AZR_CLUSTER
-  namespace: $AZR_CLUSTER
+  name: $ARO_CLUSTER
+  namespace: $ARO_CLUSTER
 spec:
-  clusterName: $AZR_CLUSTER
-  clusterNamespace: $AZR_CLUSTER
+  clusterName: $ARO_CLUSTER
+  clusterNamespace: $ARO_CLUSTER
   clusterLabels:
-    Name: $AZR_CLUSTER
+    Name: $ARO_CLUSTER
     cloud: auto-detect
     vendor: auto-detect
     cluster.open-cluster-management.io/clusterset: rosa-aro-clusters
-    env: $AZR_CLUSTER
+    env: $ARO_CLUSTER
   applicationManager:
     enabled: true
   policyController:
@@ -596,7 +597,7 @@ apiVersion: submarineraddon.open-cluster-management.io/v1alpha1
 kind: SubmarinerConfig
 metadata:
   name: submariner
-  namespace: $AZR_CLUSTER
+  namespace: $ARO_CLUSTER
 spec:
   IPSecNATTPort: 4500
   NATTEnable: true
@@ -627,7 +628,7 @@ apiVersion: addon.open-cluster-management.io/v1alpha1
 kind: ManagedClusterAddOn
 metadata:
      name: submariner
-     namespace: $AZR_CLUSTER
+     namespace: $ARO_CLUSTER
 spec:
      installNamespace: submariner-operator
 EOF

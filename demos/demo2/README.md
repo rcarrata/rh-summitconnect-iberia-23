@@ -32,7 +32,7 @@ services without exposing the backend to the public internet.
 
 ```sh
 export VERSION=4.11.36 \
-      ROSA_CLUSTER_NAME=poc-inter-1 \
+      ROSA_CLUSTER_NAME=rosa-summit-1 \
       AWS_ACCOUNT_ID=`aws sts get-caller-identity --query Account --output text` \
       REGION=eu-west-1 \
       AWS_PAGER="" \
@@ -64,7 +64,7 @@ oc login https://api.poc-inter-1.xxx.com:6443 --username cluster-admin --passwor
 ```sh
 AZR_RESOURCE_LOCATION=eastus
 AZR_RESOURCE_GROUP=aro-summit-rg
-AZR_CLUSTER=aro-summit
+ARO_CLUSTER=aro-summit-1
 AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```
 
@@ -81,7 +81,7 @@ AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```sh
  az network vnet create \
    --address-prefixes 10.0.0.0/22 \
-   --name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
    --resource-group $AZR_RESOURCE_GROUP
 ```
 
@@ -90,8 +90,8 @@ AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```sh
  az network vnet subnet create \
    --resource-group $AZR_RESOURCE_GROUP \
-   --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
-   --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+   --vnet-name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --name "$ARO_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
    --address-prefixes 10.0.0.0/23 \
    --service-endpoints Microsoft.ContainerRegistry
 ```
@@ -101,8 +101,8 @@ AZR_PULL_SECRET=~/Downloads/pull-secret.txt
 ```sh
 az network vnet subnet create \
   --resource-group $AZR_RESOURCE_GROUP \
-  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
-  --name "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+  --vnet-name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+  --name "$ARO_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
   --address-prefixes 10.0.2.0/23 \
   --service-endpoints Microsoft.ContainerRegistry
 ```
@@ -111,9 +111,9 @@ az network vnet subnet create \
 
 ```sh
 az network vnet subnet update \
-  --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+  --name "$ARO_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
   --resource-group $AZR_RESOURCE_GROUP \
-  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+  --vnet-name "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
   --disable-private-link-service-network-policies true
 ```
 
@@ -122,23 +122,23 @@ az network vnet subnet update \
 ```sh
  az aro create \
    --resource-group $AZR_RESOURCE_GROUP \
-   --name $AZR_CLUSTER \
-   --vnet "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
-   --master-subnet "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
-   --worker-subnet "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+   --name $ARO_CLUSTER \
+   --vnet "$ARO_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION" \
+   --master-subnet "$ARO_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+   --worker-subnet "$ARO_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
    --pull-secret @$AZR_PULL_SECRET
 ```
 
 * Get ARO OpenShift API Url
 
 ```sh
-ARO_URL=$(az aro show -g $AZR_RESOURCE_GROUP -n $AZR_CLUSTER --query apiserverProfile.url -o tsv)
+ARO_URL=$(az aro show -g $AZR_RESOURCE_GROUP -n $ARO_CLUSTER --query apiserverProfile.url -o tsv)
 ```
 
 * Login into the ARO cluster and set context
 
 ```sh
-ARO_KUBEPASS=$(az aro list-credentials --name $AZR_CLUSTER --resource-group $AZR_RESOURCE_GROUP -o tsv --query kubeadminPassword)
+ARO_KUBEPASS=$(az aro list-credentials --name $ARO_CLUSTER --resource-group $AZR_RESOURCE_GROUP -o tsv --query kubeadminPassword)
 ```
 
 * Login into the ARO cluster and set context
@@ -172,8 +172,8 @@ kubectl config rename-context $(oc config current-context) $ROSA_CLUSTER_NAME
 kubectl config use $ROSA_CLUSTER_NAME
 
 oc login --username kubeadmin --password $ARO_KUBEPASS --server=$ARO_URL
-kubectl config rename-context $(oc config current-context) $AZR_CLUSTER
-kubectl config use $AZR_CLUSTER
+kubectl config rename-context $(oc config current-context) $ARO_CLUSTER
+kubectl config use $ARO_CLUSTER
 ```
 
 ## 4. Install and configure Red Hat Service Interconnect
@@ -245,9 +245,9 @@ _**ARO Cluster**_
 * Set context to ARO cluster and create demo namespace:
 
 ```sh
-kubectl config use $AZR_CLUSTER
+kubectl config use $ARO_CLUSTER
 kubectl create namespace aro-interconnect
-kubectl config set-context $AZR_CLUSTER --namespace=aro-interconnect
+kubectl config set-context $ARO_CLUSTER --namespace=aro-interconnect
 ```
 
 * Install operator:
@@ -325,7 +325,7 @@ skupper token create /tmp/secret.token
 _**ARO Cluster**_
 
 ```sh
-kubectl config use $AZR_CLUSTER --namespace=aro-interconnect
+kubectl config use $ARO_CLUSTER --namespace=aro-interconnect
 skupper link create /tmp/secret.token
 ```
 
@@ -356,7 +356,7 @@ _**ARO Cluster**_
 * Deploy the backend in the ARO cluster:
 
 ```sh
-kubectl config use $AZR_CLUSTER --namespace=aro-interconnect
+kubectl config use $ARO_CLUSTER --namespace=aro-interconnect
 kubectl create --namespace aro-interconnect deployment backend --image quay.io/rcarrata/skupper-summit-backend:v4 --replicas 3
 
 # Wait until deployment is READY
