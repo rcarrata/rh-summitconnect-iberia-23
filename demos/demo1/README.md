@@ -64,7 +64,7 @@ spec:
 EOF
 ```
 
-* Install Operator ACM 2.7
+* Install Operator ACM 2.8
 
 ```sh
 cat << EOF | kubectl apply -f -
@@ -74,7 +74,7 @@ metadata:
   name: advanced-cluster-management
   namespace: open-cluster-management
 spec:
-  channel: release-2.7
+  channel: release-2.8
   installPlanApproval: Automatic
   name: advanced-cluster-management
   source: redhat-operators
@@ -89,7 +89,7 @@ NOTE: you can select from ACM 2.7 onwards for install ACM Submariner for ROSA/AR
 ```sh
 kubectl get csv -n open-cluster-management
 NAME                                 DISPLAY                                      VERSION   REPLACES                             PHASE
-advanced-cluster-management.v2.7.2   Advanced Cluster Management for Kubernetes   2.7.2     advanced-cluster-management.v2.7.1   Succeeded
+advanced-cluster-management.v2.8.2   Advanced Cluster Management for Kubernetes   2.7.2     advanced-cluster-management.v2.8.1   Succeeded
 ```
 
 NOTE: ACM Submariner for ROSA clusters only works with ACM 2.7 or newer!
@@ -98,13 +98,12 @@ NOTE: ACM Submariner for ROSA clusters only works with ACM 2.7 or newer!
 
 ```sh
 cat << EOF | kubectl apply -f -
-apiVersion: operator.open-cluster-management.io/v1
 kind: MultiClusterHub
+apiVersion: operator.open-cluster-management.io/v1
 metadata:
-  namespace: open-cluster-management
   name: multiclusterhub
-spec:
-  availabilityConfig: Basic
+  namespace: open-cluster-management
+spec: {}
 EOF
 ```
 

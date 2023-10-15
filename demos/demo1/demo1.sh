@@ -2,9 +2,10 @@ source ../utils/demo-magic.sh
 
 pei "# Deploying Demo 1 - Cloud Services ACM Submariner"
 pe "export KUBECONFIG=/var/tmp/acm-lab-kubeconfig"
-pe "export ROSA_CLUSTER_NAME='rosa-summit-1'" 
+pe "export ROSA_CLUSTER_NAME='rosa-summit-1'"
 pe "export ARO_CLUSTER='aro-summit-1'"
 
+pei "### Deploy Application in ROSA CLUSTER"
 pei "# Deploy GuestBook FrontEnd"
 pe ""
 pe "kubectl config use hub"
@@ -21,7 +22,9 @@ pe "oc get dns cluster -o yaml"
 pe "oc adm policy add-scc-to-user anyuid -z default -n guestbook"
 pe "oc delete pod --all -n guestbook"
 pei ""
+wait 10
 
+pei "### Deploy the DR in ARO CLUSTER"
 pei "# Deploy the Redis Slave App in ARO Cluster"
 pe "kubectl config use hub"
 pe "oc apply -k ../../apps/redis-slave-app/acm-resources"
