@@ -2,8 +2,8 @@ source ../utils/demo-magic.sh
 
 pei "# Demo 2 - Red Hat Interconnect"
 pe "export KUBECONFIG=/var/tmp/acm-lab-kubeconfig"
-pe "export ROSA_CLUSTER_NAME='rosa-summit'"
-pe "export ARO_CLUSTER='aro-summit'"
+pe "export ROSA_CLUSTER_NAME='rosa-summit-1'" 
+pe "export ARO_CLUSTER='aro-summit-1'"
 pei ""
 
 pei "# Test the application"
