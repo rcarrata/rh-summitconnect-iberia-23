@@ -12,13 +12,14 @@ Easily and scalable connect your applications and microservices across multiple 
 * [Demo 2 - Connecting MultiClustering applications using Red Hat Interconnect](./demos/demo2/README.md)
 * [Demo 3 - Federate and connect your multiple clusters with OpenShift Service Mesh Federation](./demos/demo3/README.md)
 
-## Live Demos Video
+## Demo Videos
 
-*Available Soon!*
+* [Demo 1 - Connecting Multiclustering applications with RHACM and Submariner](https://youtu.be/cmR-HnQSrbg)
+* [Demo 2 - Connecting MultiClustering applications using Red Hat Interconnect](https://youtu.be/k5hvy1N5RRI)
 
 ## Slides
 
-*Available Soon!*
+* [Connecting your productive applications and microservices at scale in a MultiCloud and MultiRegion environments slides](./assets/slides.pdf)
 
 ## Maintainers
 
